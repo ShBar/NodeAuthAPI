@@ -1,4 +1,5 @@
-import { body } from 'express-validator'
+import { NextFunction, Request, Response } from 'express';
+import { body, validationResult } from 'express-validator'
 
 export const signupValidator = [
     body("email", "Cannot be empty").not().isEmpty(),
@@ -18,3 +19,13 @@ export const loginValidator = [
 export const updateValidator = [
     body("lastName", "Cannot be empty").not().isEmpty(),
 ];
+
+
+export const validatorMw = (req: Request, res: Response, next: NextFunction) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(422).json({ errors: errors.array() });
+        return
+    }
+    next()
+}

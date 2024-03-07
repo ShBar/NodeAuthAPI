@@ -1,28 +1,17 @@
 import { NextFunction, Request, Response } from "express";
-import { validationResult } from "express-validator";
-import { LoginRequest, SignupRequest } from "../../models/SignupRequest";
+import { LoginRequest, SignupRequest } from "../../interfaces/SignupRequest";
 import logger from "../../logger";
-import { UserAccount } from "../../db/models/User";
 import { compareSync } from "bcryptjs";
 import * as jwt from "jsonwebtoken";
+import { UserRepo } from "../../repositories/UserRepo";
 
 const JWT_SECRET = process.env.SECRET_KEY || "";
 
-export const signup = async (req: Request, res: Response, next: NextFunction) => {
+export const signup = async (req: Request, res: Response) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(422).json({ errors: errors.array() });
-            return
-        }
-
         const form = <SignupRequest>req.body;
-        const user: any = await UserAccount.create({
-            email: form.email,
-            password: form.password,
-            firstName: form.firstName,
-            lastName: form.lastName,
-        });
+
+        const user: any = await UserRepo.createUser(form);
 
         res.status(201).json({
             id: user.id
@@ -34,20 +23,18 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 
-export const login = async (req: Request, res: Response, next: NextFunction) => {
+export const login = async (req: Request, res: Response) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            res.status(422).json({ errors: errors.array() });
+        const form = <LoginRequest>req.body;
+
+        const user: any = await UserRepo.getUserByEmail(form.email as string);
+
+        if(!user) {
+            res.status(401).json({
+                error: "Authentication Failed: Invalid Email or Password"
+            });
             return
         }
-
-        const form = <LoginRequest>req.body;
-        const user: any = await UserAccount.findOne({
-            where: {
-                email: form.email
-            }
-        });
 
         const isMatch = compareSync(form.password as string, user.password);
         if (isMatch) {
@@ -60,7 +47,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             res.status(200).json({ token });
         } else {
             res.status(401).json({
-                error: "Authentication Failed"
+                error: "Authentication Failed: Invalid Email or Password"
             });
         }
 
@@ -68,4 +55,17 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         logger.error(error);
         res.status(500).send();
     }
+}
+
+export const checkIfEmailExists = async (req: Request, res: Response, next: NextFunction) => {
+    const form = <SignupRequest>req.body;
+
+    const count: number = await UserRepo.checkIfEmailExists(form.email as string);
+    logger.info(`Count: ${count}`);
+    
+    if (count > 0) {
+        res.status(400).json({ error: "Account already exists, login instead" })
+        return
+    }
+    next()
 }
