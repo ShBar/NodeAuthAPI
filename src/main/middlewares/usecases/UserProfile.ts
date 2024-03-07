@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
 import logger from "../../logger";
-import { UserAccount } from "../../db/models/User";
+import { UserRepo } from "../../repositories/UserRepo";
 
 export const getProfile = async (req: Request, res: Response) => {
     try {
         const { id } = req.body.user;
-        const user: any = await UserAccount.findByPk(id);
+
+        const user: any = await UserRepo.getUserById(id);
+
         res.status(200).json({
             firstName: user.firstName,
             lastName: user.lastName,
@@ -20,11 +22,9 @@ export const getProfile = async (req: Request, res: Response) => {
 export const updateProfile = async (req: Request, res: Response) => {
     try {
         const { lastName, user } = req.body;
-        await UserAccount.update({ lastName }, {
-            where: {
-                id: user.id
-            }
-        });
+        
+        await UserRepo.updateUserLastName(user.id, lastName);
+
         res.status(200).send();
     } catch (error) {
         logger.error(error);

@@ -1,21 +1,17 @@
 import { NextFunction, Request, Response } from "express";
 import { LoginRequest, SignupRequest } from "../../interfaces/SignupRequest";
 import logger from "../../logger";
-import { UserAccount } from "../../db/models/User";
 import { compareSync } from "bcryptjs";
 import * as jwt from "jsonwebtoken";
+import { UserRepo } from "../../repositories/UserRepo";
 
 const JWT_SECRET = process.env.SECRET_KEY || "";
 
 export const signup = async (req: Request, res: Response) => {
     try {
         const form = <SignupRequest>req.body;
-        const user: any = await UserAccount.create({
-            email: form.email,
-            password: form.password,
-            firstName: form.firstName,
-            lastName: form.lastName,
-        });
+
+        const user: any = await UserRepo.createUser(form);
 
         res.status(201).json({
             id: user.id
@@ -30,11 +26,15 @@ export const signup = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
     try {
         const form = <LoginRequest>req.body;
-        const user: any = await UserAccount.findOne({
-            where: {
-                email: form.email
-            }
-        });
+
+        const user: any = await UserRepo.getUserByEmail(form.email as string);
+
+        if(!user) {
+            res.status(401).json({
+                error: "Authentication Failed: Invalid Email or Password"
+            });
+            return
+        }
 
         const isMatch = compareSync(form.password as string, user.password);
         if (isMatch) {
@@ -47,7 +47,7 @@ export const login = async (req: Request, res: Response) => {
             res.status(200).json({ token });
         } else {
             res.status(401).json({
-                error: "Authentication Failed"
+                error: "Authentication Failed: Invalid Email or Password"
             });
         }
 
@@ -59,11 +59,10 @@ export const login = async (req: Request, res: Response) => {
 
 export const checkIfEmailExists = async (req: Request, res: Response, next: NextFunction) => {
     const form = <SignupRequest>req.body;
-    const count: any = await UserAccount.count({
-        where: {
-            email: form.email
-        }
-    });
+
+    const count: number = await UserRepo.checkIfEmailExists(form.email as string);
+    logger.info(`Count: ${count}`);
+    
     if (count > 0) {
         res.status(400).json({ error: "Account already exists, login instead" })
         return
