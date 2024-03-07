@@ -4,7 +4,7 @@ import logger from '../../logger';
 
 const secret = process.env.SECRET_KEY || "";
 
-export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+export const authMw = (req: Request, res: Response, next: NextFunction) => {
     const token = req.header("Authorization")?.split(" ")[1];
     if (!token) {
         return res.status(401);

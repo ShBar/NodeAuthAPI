@@ -2,7 +2,7 @@ import express from "express";
 import logger from "./logger";
 import userRoutes from './routes/UserRoutes';
 import authRoutes from "./routes/AuthRoutes";
-import { authenticate } from "./middlewares/common/Auth";
+import { authMw } from "./middlewares/common/Auth";
 import { syncModels } from "./db/models/User";
 
 const app = express();
@@ -15,7 +15,7 @@ syncModels().then(() => {
     app.use(express.json());
 
     app.use("/api/v1/auth", authRoutes);
-    app.use("/api/v1/user", authenticate, userRoutes);
+    app.use("/api/v1/user", authMw, userRoutes);
 
     app.listen(port, () => {
         logger.info(`${serviceName} running at port:${port}`);

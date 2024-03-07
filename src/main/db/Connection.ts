@@ -9,8 +9,6 @@ const config = {
     dialect: <Dialect> "mysql",
 }
 
-logger.info(`DB Config: ${JSON.stringify(config)}`);
-
 export const sequelizeConnection = new Sequelize(config.database, config.user, config.password, {
     host: config.host,
     dialect: config.dialect,
